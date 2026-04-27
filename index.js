@@ -4,16 +4,17 @@ const { initDB, getDB } = require('./database');
 const { Web3 } = require('web3');
 const ethers = require('ethers');
 
-// Конфиг
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const RPC_URL = process.env.RPC_URL;
-const PRESALE_ADDRESS = process.env.PRESALE_CONTRACT;
-const TOKEN_ADDRESS = process.env.TOKEN_CONTRACT;
-const TOKEN_PRICE_ETH = parseFloat(process.env.TOKEN_PRICE_ETH);
-const MIN_PURCHASE_ETH = parseFloat(process.env.MIN_PURCHASE_ETH);
-const ADMIN_ID = process.env.ADMIN_ID ? parseInt(process.env.ADMIN_ID) : null;
+// ========== РЕАЛЬНЫЕ ДАННЫЕ ИЗ ВАШЕГО ПРОЕКТА ==========
+const BOT_TOKEN = '8751544398:AAFgfYI853CQaZ-i0Uu48pMpIHzpPZvIDnI';
+const RPC_URL = 'https://eth.llamarpc.com';
+const PRESALE_ADDRESS = '0x8CdeBa5Db0a4046D8BBC655244173750c7DFd553';
+const TOKEN_ADDRESS = '0x87D336511760583B11B87866654c6f7253c1cB0D';
+const TOKEN_PRICE_ETH = 0.0001;
+const MIN_PURCHASE_ETH = 0.01;
+const WALLET_CONNECT_PROJECT_ID = 'ad01e4465a19e847abe4ac7c4097d10c';
+const WEBSITE = 'https://zuzim-universe.com';
 
-// ABIs
+// ABIs для ваших контрактов
 const PRESALE_ABI = [
   "function buyTokens() external payable",
   "function tokensSold() view returns (uint256)",
@@ -30,7 +31,7 @@ const web3 = new Web3(RPC_URL);
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(session());
 
-// Уровни мудрецов
+// Уровни мудрецов по порогам из вашего сайта
 const SAGE_LEVELS = [
   { name: "🌱 Novice", threshold: 0, bonus: 0, next: 1000 },
   { name: "📜 Wisdom", threshold: 1000, bonus: 2, next: 5000 },
@@ -67,9 +68,6 @@ const mainKeyboard = () => Markup.keyboard([
   ['📜 Активность', '🧙‍♂️ Ранг Мудреца'],
   ['⚙️ Настройки', '❓ Помощь']
 ]).resize();
-
-// Кнопка "Назад" для подменю
-const backButton = () => Markup.keyboard([['🔙 Назад']]).resize();
 
 // Обработчик команды /start
 bot.start(async (ctx) => {
@@ -123,7 +121,7 @@ bot.hears('🏠 Главная', async (ctx) => {
     `└ ID: \`${userId}\`\n\n` +
     `📢 *Новости:*\n` +
     `└ Пресейл активен до 1 июля 2026\n` +
-    `└ ${68} бонусных мест осталось!\n\n` +
+    `└ 68 бонусных мест осталось!\n\n` +
     `💡 *Совет:* Приглашайте друзей и получайте 5% от их покупок!`,
     { parse_mode: 'Markdown', ...mainKeyboard() }
   );
@@ -134,7 +132,6 @@ bot.hears('💰 Мой баланс', async (ctx) => {
   const db = getDB();
   const user = await db.get('SELECT balance_eth, balance_zuz, staked_zuz FROM users WHERE user_id = ?', userId);
   
-  // Скрытый баланс по умолчанию
   ctx.session.showBalance = ctx.session.showBalance === undefined ? false : ctx.session.showBalance;
   
   const eye = ctx.session.showBalance ? '👁️' : '👁️‍🗨️';
@@ -157,12 +154,10 @@ bot.hears('💰 Мой баланс', async (ctx) => {
   );
 });
 
-// Инлайн кнопки для баланса
 bot.action('toggle_balance', async (ctx) => {
   ctx.session.showBalance = !ctx.session.showBalance;
   await ctx.answerCbQuery();
   await ctx.deleteMessage();
-  // Запускаем заново обработчик
   await bot.hears('💰 Мой баланс', ctx);
 });
 
@@ -172,7 +167,6 @@ bot.action('refresh_balance', async (ctx) => {
   await bot.hears('💰 Мой баланс', ctx);
 });
 
-// Стейкинг
 bot.hears('📊 Стейкинг', async (ctx) => {
   await ctx.reply(
     `🏦 *ZUZ Staking Pool*\n\n` +
@@ -193,14 +187,13 @@ bot.hears('📊 Стейкинг', async (ctx) => {
   );
 });
 
-// Обмен / DEX
 bot.hears('💱 Обмен / DEX', async (ctx) => {
   await ctx.reply(
     `💱 *Обмен ZUZ*\n\n` +
     `🎯 *Пресейл:* 1 ZUZ = ${TOKEN_PRICE_ETH} ETH\n` +
     `💰 *Мин. покупка:* ${MIN_PURCHASE_ETH} ETH\n\n` +
     `📊 *Uniswap:* после пресейла\n` +
-    `🔗 ${TOKEN_ADDRESS}\n\n` +
+    `🔗 \`${TOKEN_ADDRESS}\`\n\n` +
     `👇 Выберите способ:`,
     {
       parse_mode: 'Markdown',
@@ -213,7 +206,6 @@ bot.hears('💱 Обмен / DEX', async (ctx) => {
   );
 });
 
-// Покупка ZUZ
 bot.action('buy_zuz', async (ctx) => {
   await ctx.answerCbQuery();
   await ctx.reply(
@@ -223,15 +215,15 @@ bot.action('buy_zuz', async (ctx) => {
     `Макс: без ограничений\n\n` +
     `Отправьте команду:\n` +
     `\`/buy 0.1\` — купить на 0.1 ETH\n\n` +
-    `Важно: у вас должен быть ETH в кошельке бота!`,
+    `Ваш адрес для пополнения:\n` +
+    `\`${ctx.from.id}\` (в разработке)`,
     { parse_mode: 'Markdown' }
   );
 });
 
-// Партнёры
 bot.hears('👥 Партнёры', async (ctx) => {
   const userId = ctx.from.id;
-  const refLink = `https://t.me/${ctx.botInfo.username}?start=ref_${userId}`;
+  const refLink = `https://t.me/zuzuniverse_bot?start=ref_${userId}`;
   
   const db = getDB();
   const referrals = await db.all('SELECT * FROM referrals WHERE referrer_id = ?', userId);
@@ -255,14 +247,12 @@ bot.hears('👥 Партнёры', async (ctx) => {
   );
 });
 
-// Копирование реферальной ссылки
 bot.action(/copy_ref_(.+)/, async (ctx) => {
-  const refLink = `https://t.me/${ctx.botInfo.username}?start=ref_${ctx.match[1]}`;
+  const refLink = `https://t.me/zuzuniverse_bot?start=ref_${ctx.match[1]}`;
   await ctx.answerCbQuery();
   await ctx.reply(`🔗 Ваша ссылка:\n${refLink}\n\nСкопируйте её и отправьте друзьям!`);
 });
 
-// Реварды
 bot.hears('🎁 Реварды', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -282,7 +272,6 @@ bot.hears('🎁 Реварды', async (ctx) => {
   );
 });
 
-// Активность
 bot.hears('📜 Активность', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -303,7 +292,6 @@ bot.hears('📜 Активность', async (ctx) => {
   await ctx.reply(history, { parse_mode: 'Markdown', ...mainKeyboard() });
 });
 
-// Ранг мудреца
 bot.hears('🧙‍♂️ Ранг Мудреца', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -337,7 +325,6 @@ bot.hears('🧙‍♂️ Ранг Мудреца', async (ctx) => {
   );
 });
 
-// Настройки
 bot.hears('⚙️ Настройки', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -350,7 +337,8 @@ bot.hears('⚙️ Настройки', async (ctx) => {
     `⚠️ *Ваш приватный ключ (никому не показывайте!):*\n` +
     `||${user?.private_key?.substring(0, 8)}...${user?.private_key?.substring(user?.private_key?.length - 6)}||\n\n` +
     `🔄 *Сеть:* Ethereum Mainnet\n` +
-    `🌐 *Язык:* Русский / English\n\n` +
+    `🔗 *Контракт токена:* \`${TOKEN_ADDRESS}\`\n` +
+    `🔗 *Пресейл:* \`${PRESALE_ADDRESS}\`\n\n` +
     `⬇️ *Действия:*`,
     {
       parse_mode: 'Markdown',
@@ -362,7 +350,6 @@ bot.hears('⚙️ Настройки', async (ctx) => {
   );
 });
 
-// Помощь
 bot.hears('❓ Помощь', async (ctx) => {
   await ctx.reply(
     `❓ *Помощь ZUZ Universe*\n\n` +
@@ -373,15 +360,16 @@ bot.hears('❓ Помощь', async (ctx) => {
     `/wallet - Показать адрес кошелька\n` +
     `/referral - Партнёрская ссылка\n\n` +
     `🔗 *Полезные ссылки:*\n` +
-    `[Сайт](https://zuzim-universe.com)\n` +
+    `[Сайт](${WEBSITE})\n` +
     `[Twitter](https://x.com/zuzim_universe)\n` +
-    `[Telegram](https://t.me/zuzimuniverse)\n\n` +
-    `📞 *Поддержка:* @zuzim_support`,
+    `[Telegram](https://t.me/zuzimuniverse)\n` +
+    `[Discord](https://discord.gg/qqFmmD7m)\n` +
+    `[GitHub](https://github.com/zzuzcoin-blip/zuzim-universe-clean)\n\n` +
+    `📞 *Поддержка:* @zuzimuniverse`,
     { parse_mode: 'Markdown', disable_web_page_preview: true, ...mainKeyboard() }
   );
 });
 
-// Команда /buy
 bot.command('buy', async (ctx) => {
   const userId = ctx.from.id;
   const args = ctx.message.text.split(' ');
@@ -408,12 +396,10 @@ bot.command('buy', async (ctx) => {
   await ctx.reply(`⏳ Обработка покупки ${ethAmount} ETH...\n⚠️ Функция в разработке. Для реальной покупки нужно пополнить кошелёк и отправить транзакцию.`);
 });
 
-// Команда /balance
 bot.command('balance', async (ctx) => {
   await bot.hears('💰 Мой баланс', ctx);
 });
 
-// Команда /wallet
 bot.command('wallet', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -421,17 +407,15 @@ bot.command('wallet', async (ctx) => {
   await ctx.reply(`🔑 *Ваш кошелёк:*\n\`${user?.wallet_address}\``, { parse_mode: 'Markdown' });
 });
 
-// Команда /referral
 bot.command('referral', async (ctx) => {
   await bot.hears('👥 Партнёры', ctx);
 });
 
-// Кнопка "Назад"
 bot.hears('🔙 Назад', async (ctx) => {
   await ctx.reply('🏠 *Главное меню*', { parse_mode: 'Markdown', ...mainKeyboard() });
 });
 
-// Заглушки для нереализованных действий
+// Заглушки
 bot.action('stake_zuz', async (ctx) => {
   await ctx.answerCbQuery('⚠️ Функция стейкинга будет доступна после пресейла');
 });
@@ -445,7 +429,7 @@ bot.action('uniswap_soon', async (ctx) => {
   await ctx.answerCbQuery('Uniswap листинг после пресейла (июль 2026)');
 });
 bot.action('add_token', async (ctx) => {
-  await ctx.answerCbQuery('Добавьте вручную: ' + TOKEN_ADDRESS);
+  await ctx.answerCbQuery(`Добавьте вручную: ${TOKEN_ADDRESS}`);
 });
 bot.action('claim_all_rewards', async (ctx) => {
   await ctx.answerCbQuery('Награды пока 0 ZUZ');
@@ -454,7 +438,7 @@ bot.action('export_private', async (ctx) => {
   await ctx.answerCbQuery('⚠️ Никогда не передавайте приватный ключ!');
 });
 bot.action('delete_account', async (ctx) => {
-  await ctx.answerCbQuery('Для удаления напишите @zuzim_support');
+  await ctx.answerCbQuery('Для удаления напишите @zuzimuniverse');
 });
 
 // Запуск бота
@@ -463,10 +447,11 @@ async function start() {
   await bot.launch();
   console.log('🚀 ZUZ Universe Bot запущен!');
   console.log('📱 Бот: https://t.me/zuzuniverse_bot');
+  console.log(`🔗 Токен: ${TOKEN_ADDRESS}`);
+  console.log(`🔗 Пресейл: ${PRESALE_ADDRESS}`);
 }
 
 start();
 
-// Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
