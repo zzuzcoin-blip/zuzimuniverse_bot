@@ -13,6 +13,7 @@ const TOKEN_PRICE_ETH = 0.0001;
 const MIN_PURCHASE_ETH = 0.01;
 const WALLET_CONNECT_PROJECT_ID = 'ad01e4465a19e847abe4ac7c4097d10c';
 const WEBSITE = 'https://zuzim-universe.com';
+const VIDEO_URL = 'https://zuzim-universe.com/zuz.mp4';  // ВАШЕ ВИДЕО
 
 // ABIs для ваших контрактов
 const PRESALE_ABI = [
@@ -31,7 +32,7 @@ const web3 = new Web3(RPC_URL);
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(session());
 
-// Уровни мудрецов по порогам из вашего сайта
+// Уровни мудрецов
 const SAGE_LEVELS = [
   { name: "🌱 Novice", threshold: 0, bonus: 0, next: 1000 },
   { name: "📜 Wisdom", threshold: 1000, bonus: 2, next: 5000 },
@@ -69,7 +70,7 @@ const mainKeyboard = () => Markup.keyboard([
   ['⚙️ Настройки', '❓ Помощь']
 ]).resize();
 
-// Обработчик команды /start
+// Обработчик команды /start (С ВИДЕО!)
 bot.start(async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -96,37 +97,42 @@ bot.start(async (ctx) => {
   
   const newUser = await db.get('SELECT wallet_address FROM users WHERE user_id = ?', userId);
   
-  await ctx.reply(
-    `✨ *Добро пожаловать в ZUZ Universe!* ✨\n\n` +
-    `Ваш кошелёк создан:\n` +
-    `\`${newUser.wallet_address}\`\n\n` +
-    `⚡ *Time > Money*\n` +
-    `Присоединяйтесь к сообществу 7 мудрецов!`,
-    { parse_mode: 'Markdown', ...mainKeyboard() }
-  );
+  // ОТПРАВЛЯЕМ ВИДЕО-ЗАСТАВКУ
+  await ctx.replyWithVideo(VIDEO_URL, {
+    caption: `✨ *Добро пожаловать в ZUZ Universe!* ✨\n\n` +
+             `Ваш кошелёк создан:\n` +
+             `\`${newUser.wallet_address}\`\n\n` +
+             `⚡ *Time > Money*\n` +
+             `Присоединяйтесь к сообществу 7 мудрецов!`,
+    parse_mode: 'Markdown'
+  });
+  
+  await ctx.reply('🏠 *Главное меню*', { parse_mode: 'Markdown', ...mainKeyboard() });
 });
 
-// Обработчик текстовых сообщений
+// Главная страница (ТОЖЕ С ВИДЕО!)
 bot.hears('🏠 Главная', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
   const user = await db.get('SELECT * FROM users WHERE user_id = ?', userId);
   const sage = getSageLevel(user?.balance_zuz || 0);
   
-  await ctx.reply(
-    `🏛️ *ZUZ UNIVERSE* 🏛️\n\n` +
-    `👤 *Ваш профиль:*\n` +
-    `└ Ранг: ${sage.name}\n` +
-    `└ Бонус стейкинга: +${sage.bonus}%\n` +
-    `└ ID: \`${userId}\`\n\n` +
-    `📢 *Новости:*\n` +
-    `└ Пресейл активен до 1 июля 2026\n` +
-    `└ 68 бонусных мест осталось!\n\n` +
-    `💡 *Совет:* Приглашайте друзей и получайте 5% от их покупок!`,
-    { parse_mode: 'Markdown', ...mainKeyboard() }
-  );
+  // Отправляем видео
+  await ctx.replyWithVideo(VIDEO_URL, {
+    caption: `🏛️ *ZUZ UNIVERSE* 🏛️\n\n` +
+             `👤 *Ваш профиль:*\n` +
+             `└ Ранг: ${sage.name}\n` +
+             `└ Бонус стейкинга: +${sage.bonus}%\n` +
+             `└ ID: \`${userId}\`\n\n` +
+             `📢 *Новости:*\n` +
+             `└ Пресейл активен до 1 июля 2026\n` +
+             `└ 68 бонусных мест осталось!\n\n` +
+             `💡 *Совет:* Приглашайте друзей и получайте 5% от их покупок!`,
+    parse_mode: 'Markdown'
+  });
 });
 
+// Остальные обработчики (без изменений)
 bot.hears('💰 Мой баланс', async (ctx) => {
   const userId = ctx.from.id;
   const db = getDB();
@@ -215,8 +221,7 @@ bot.action('buy_zuz', async (ctx) => {
     `Макс: без ограничений\n\n` +
     `Отправьте команду:\n` +
     `\`/buy 0.1\` — купить на 0.1 ETH\n\n` +
-    `Ваш адрес для пополнения:\n` +
-    `\`${ctx.from.id}\` (в разработке)`,
+    `Важно: у вас должен быть ETH в кошельке бота!`,
     { parse_mode: 'Markdown' }
   );
 });
@@ -447,8 +452,7 @@ async function start() {
   await bot.launch();
   console.log('🚀 ZUZ Universe Bot запущен!');
   console.log('📱 Бот: https://t.me/zuzuniverse_bot');
-  console.log(`🔗 Токен: ${TOKEN_ADDRESS}`);
-  console.log(`🔗 Пресейл: ${PRESALE_ADDRESS}`);
+  console.log(`🎬 Видео-заставка: ${VIDEO_URL}`);
 }
 
 start();
