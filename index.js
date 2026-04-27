@@ -1,8 +1,8 @@
 require('dotenv').config();
 const { Telegraf, Markup, session } = require('telegraf');
 const { initDB, getDB } = require('./database');
-const Web3 = require('web3');
-const { ethers } = require('ethers');
+const { Web3 } = require('web3');
+const ethers = require('ethers');
 
 // Конфиг
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -96,10 +96,12 @@ bot.start(async (ctx) => {
     }
   }
   
+  const newUser = await db.get('SELECT wallet_address FROM users WHERE user_id = ?', userId);
+  
   await ctx.reply(
     `✨ *Добро пожаловать в ZUZ Universe!* ✨\n\n` +
     `Ваш кошелёк создан:\n` +
-    `\`${user?.wallet_address || (await db.get('SELECT wallet_address FROM users WHERE user_id = ?', userId)).wallet_address}\`\n\n` +
+    `\`${newUser.wallet_address}\`\n\n` +
     `⚡ *Time > Money*\n` +
     `Присоединяйтесь к сообществу 7 мудрецов!`,
     { parse_mode: 'Markdown', ...mainKeyboard() }
@@ -121,7 +123,7 @@ bot.hears('🏠 Главная', async (ctx) => {
     `└ ID: \`${userId}\`\n\n` +
     `📢 *Новости:*\n` +
     `└ Пресейл активен до 1 июля 2026\n` +
-    `└ ${68 - (user?.referrals_count || 0)} бонусных мест осталось!\n\n` +
+    `└ ${68} бонусных мест осталось!\n\n` +
     `💡 *Совет:* Приглашайте друзей и получайте 5% от их покупок!`,
     { parse_mode: 'Markdown', ...mainKeyboard() }
   );
@@ -371,7 +373,7 @@ bot.hears('❓ Помощь', async (ctx) => {
     `/wallet - Показать адрес кошелька\n` +
     `/referral - Партнёрская ссылка\n\n` +
     `🔗 *Полезные ссылки:*\n` +
-    `[Сайт](${process.env.WEBSITE || 'https://zuzim-universe.com'})\n` +
+    `[Сайт](https://zuzim-universe.com)\n` +
     `[Twitter](https://x.com/zuzim_universe)\n` +
     `[Telegram](https://t.me/zuzimuniverse)\n\n` +
     `📞 *Поддержка:* @zuzim_support`,
@@ -460,7 +462,7 @@ async function start() {
   await initDB();
   await bot.launch();
   console.log('🚀 ZUZ Universe Bot запущен!');
-  console.log(`📱 Бот: https://t.me/zuzuniverse_bot`);
+  console.log('📱 Бот: https://t.me/zuzuniverse_bot');
 }
 
 start();
