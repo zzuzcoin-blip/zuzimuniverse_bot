@@ -3,12 +3,13 @@ const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const { ethers } = require('ethers');
 
-// ========== НОВЫЙ URL ВАШЕГО MINI APP ==========
-// !!! ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ - ВСТАВЬТЕ ВАШУ ССЫЛКУ !!!
+// ========== НАСТРОЙКИ ДЛЯ НОВОГО БОТА ==========
+// !!! НОВЫЙ ТОКЕН ДЛЯ БОТА @Zuz_Universe_bot !!!
+const BOT_TOKEN = '8727123104:AAHs4JCrsMY7ViaQQNtGdldkxuB31F3t3Yg';
+// !!! АДРЕС ВАШЕГО MINI APP (НЕ МЕНЯЙТЕ) !!!
 const MINI_APP_URL = 'https://zuzumiverse-bot.onrender.com';
-// ================================================
+// =============================================
 
-const BOT_TOKEN = '8751544398:AAFgfYI853CQaZ-i0Uu48pMpIHzpPZvIDnI';
 const WEBSITE = 'https://zuzim-universe.com';
 const TOKEN_ADDRESS = '0x87D336511760583B11B87866654c6f7253c1cB0D';
 
@@ -95,7 +96,6 @@ bot.start(async (ctx) => {
   }
   const newUser = await db.get('SELECT wallet_address FROM users WHERE user_id = ?', userId);
   
-  // Отправляем приветственное сообщение с кнопкой на Mini App
   await ctx.reply(
     `✨ *Добро пожаловать в ZUZ Universe!* ✨\n\n` +
     `Ваш кошелёк создан:\n` +
@@ -153,7 +153,8 @@ bot.action('toggle_balance', async (ctx) => {
 
 bot.hears('👥 Партнёры', async (ctx) => {
   const userId = ctx.from.id;
-  const refLink = `https://t.me/zuzuniverse_bot?start=ref_${userId}`;
+  // Используем правильное имя нового бота
+  const refLink = `https://t.me/Zuz_Universe_bot?start=ref_${userId}`;
   const db = getDB();
   const referrals = await db.all('SELECT * FROM referrals WHERE referrer_id = ?', userId);
   await ctx.reply(
@@ -164,7 +165,7 @@ bot.hears('👥 Партнёры', async (ctx) => {
 
 bot.action('copy_ref', async (ctx) => {
   const userId = ctx.from.id;
-  const refLink = `https://t.me/zuzuniverse_bot?start=ref_${userId}`;
+  const refLink = `https://t.me/Zuz_Universe_bot?start=ref_${userId}`;
   await ctx.answerCbQuery();
   await ctx.reply(`🔗 \`${refLink}\``, { parse_mode: 'Markdown' });
 });
@@ -184,7 +185,7 @@ bot.command('wallet', async (ctx) => {
 });
 bot.command('referral', async (ctx) => {
   const userId = ctx.from.id;
-  const refLink = `https://t.me/zuzuniverse_bot?start=ref_${userId}`;
+  const refLink = `https://t.me/Zuz_Universe_bot?start=ref_${userId}`;
   await ctx.reply(`🔗 \`${refLink}\``, { parse_mode: 'Markdown' });
 });
 bot.hears('🔙 Назад', async (ctx) => {
@@ -194,8 +195,8 @@ bot.hears('🔙 Назад', async (ctx) => {
 async function start() {
   await initDB();
   await bot.launch();
-  console.log('🚀 ZUZ Universe Bot запущен!');
-  console.log('📱 https://t.me/zuzuniverse_bot');
+  console.log('🚀 Новый бот ZUZ Universe запущен!');
+  console.log('📱 https://t.me/Zuz_Universe_bot');
   console.log(`🎯 Mini App URL: ${MINI_APP_URL}`);
 }
 start();
