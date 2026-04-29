@@ -3,26 +3,30 @@ const { Telegraf, Markup, session } = require('telegraf');
 const { initDB, getDB } = require('./database');
 const express = require('express');
 
-// ========== ВЕБ-СЕРВЕР ДЛЯ RENDER (он ничего не делает, только отвечает) ==========
+// ========== ВЕБ-СЕРВЕР ДЛЯ RENDER (ОБЯЗАТЕЛЬНО ДЛЯ ПОРТА) ==========
 const app = express();
-const port = process.env.PORT || 10000;
+const PORT = process.env.PORT || 10000;
 
 app.get('/', (req, res) => {
-    res.send('ZUZ Universe Bot is running');
+    res.send('ZUZ Universe Bot is running ✅');
 });
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`✅ Web server (fake) listening on port ${port}`);
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
 });
 
-// ========== КОНФИГ БОТА ==========
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Web server listening on port ${PORT}`);
+});
+
+// ========== БОТ ==========
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || 'https://zuzumiverse-bot.onrender.com';
 
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(session());
 
-// ========== КЛАВИАТУРЫ ==========
+// Клавиатуры
 const mainKeyboard = () => Markup.keyboard([
     ['🚀 ОТКРЫТЬ ПРИЛОЖЕНИЕ'],
     ['🏠 Главная', '💰 Мой баланс'],
@@ -33,7 +37,7 @@ const webAppButton = () => Markup.inlineKeyboard([
     [Markup.button.webApp('🚀 ОТКРЫТЬ ZUZ UNIVERSE', MINI_APP_URL)]
 ]);
 
-// ========== СОХРАНЕНИЕ ПОЛЬЗОВАТЕЛЯ ==========
+// Сохранение пользователя
 async function saveUser(ctx) {
     const db = getDB();
     const userId = ctx.from.id;
@@ -52,33 +56,22 @@ async function saveUser(ctx) {
             const referrerId = parseInt(args[1].replace('ref_', ''));
             if (referrerId !== userId) {
                 await db.run('UPDATE users SET referrer_id = ? WHERE user_id = ?', referrerId, userId);
-                await db.run(
-                    'INSERT INTO referrals (referrer_id, referred_id) VALUES (?, ?)',
-                    referrerId, userId
-                );
+                await db.run('INSERT INTO referrals (referrer_id, referred_id) VALUES (?, ?)', referrerId, userId);
                 await ctx.reply('🎉 Вы приглашены другом! Вам будет начисляться 5% от его покупок.');
             }
         }
     }
-    return true;
 }
 
-// ========== ОБРАБОТЧИКИ ==========
+// Обработчики
 bot.start(async (ctx) => {
     await saveUser(ctx);
-    
     await ctx.reply(
         `✨ *Добро пожаловать в ZUZ Universe!* ✨\n\n` +
         `⚡ *Time > Money*\n\n` +
-        `В нашем Mini App вы можете:\n` +
-        `• Купить ZUZ за ETH\n` +
-        `• Застейкать ZUZ под 25% APY\n` +
-        `• Получать реварды и приглашать друзей\n` +
-        `• Отслеживать свой ранг мудреца\n\n` +
         `👇 Нажмите кнопку ниже, чтобы открыть приложение.`,
         { parse_mode: 'Markdown', ...webAppButton() }
     );
-    
     await ctx.reply('🏠 *Главное меню*', { parse_mode: 'Markdown', ...mainKeyboard() });
 });
 
@@ -92,7 +85,7 @@ bot.hears('🏠 Главная', async (ctx) => {
         `📜 *Путь 7 мудрецов*\n` +
         `Чем больше ZUZ — тем выше ранг.\n` +
         `Бонус к стейкингу до +30%!\n\n` +
-        `🚀 Все действия — в Mini App: покупка, стейкинг, реварды, партнёрка.`,
+        `🚀 Все действия — в Mini App.`,
         { parse_mode: 'Markdown', ...webAppButton() }
     );
 });
@@ -108,9 +101,7 @@ bot.hears('💰 Мой баланс', async (ctx) => {
     const balanceText = ctx.session.showBalance ? `${balance.toLocaleString()} ZUZ` : '***';
     
     await ctx.reply(
-        `💰 *Ваш баланс*\n\n` +
-        `ZUZ: ${balanceText}\n\n` +
-        `📊 *Подробная статистика и стейкинг — в приложении.*`,
+        `💰 *Ваш баланс*\n\nZUZ: ${balanceText}\n\n📊 *Подробности — в приложении.*`,
         {
             parse_mode: 'Markdown',
             ...Markup.inlineKeyboard([
@@ -136,12 +127,10 @@ bot.hears('👥 Партнёры', async (ctx) => {
     
     await ctx.reply(
         `👥 *Партнёрская программа*\n\n` +
-        `Приглашайте друзей и получайте *5%* от их покупок ZUZ!\n\n` +
-        `🔗 *Ваша ссылка:*\n` +
-        `\`${refLink}\`\n\n` +
-        `📊 *Ваши партнёры:* ${referrals.length}\n` +
-        `💰 *Заработано:* ${referrals.reduce((sum, r) => sum + (r.earned_zuz || 0), 0).toLocaleString()} ZUZ\n\n` +
-        `🏆 *Бонус:* топ-3 лидеров получат +10% к стейкингу!`,
+        `Приглашайте друзей и получайте *5%* от их покупок!\n\n` +
+        `🔗 \`${refLink}\`\n\n` +
+        `📊 Партнёров: ${referrals.length}\n` +
+        `💰 Заработано: ${referrals.reduce((sum, r) => sum + (r.earned_zuz || 0), 0).toLocaleString()} ZUZ`,
         {
             parse_mode: 'Markdown',
             ...Markup.inlineKeyboard([
@@ -160,38 +149,23 @@ bot.action('copy_ref', async (ctx) => {
 
 bot.hears('❓ Помощь', async (ctx) => {
     await ctx.reply(
-        `❓ *Помощь ZUZ Universe*\n\n` +
-        `📖 *Доступные команды:*\n` +
-        `/start - перезапустить бота\n` +
-        `/wallet - показать адрес кошелька\n` +
-        `/referral - партнёрская ссылка\n\n` +
-        `🔗 *Полезные ссылки:*\n` +
-        `[Сайт](https://zuzim-universe.com)\n` +
-        `[Twitter](https://x.com/zuzim_universe)\n` +
-        `[Telegram](https://t.me/zuzimuniverse)\n\n` +
-        `📞 *Поддержка:* @zuzimuniverse`,
+        `❓ *Помощь*\n\n` +
+        `/start - перезапустить\n` +
+        `/wallet - адрес кошелька\n` +
+        `/referral - ссылка для друга\n\n` +
+        `🔗 [Сайт](https://zuzim-universe.com) | [Twitter](https://x.com/zuzim_universe)`,
         { parse_mode: 'Markdown', disable_web_page_preview: true }
     );
 });
 
 bot.command('wallet', async (ctx) => {
     await saveUser(ctx);
-    await ctx.reply(
-        `🔑 *Ваш кошелёк*\n\n` +
-        `Детали кошелька и подключение к MetaMask/Trust Wallet — в Mini App.\n\n` +
-        `👇 Откройте приложение:`,
-        { parse_mode: 'Markdown', ...webAppButton() }
-    );
+    await ctx.reply(`🔑 *Ваш кошелёк*\n\n👇 Откройте приложение:`, { parse_mode: 'Markdown', ...webAppButton() });
 });
 
 bot.command('referral', async (ctx) => {
     const userId = ctx.from.id;
-    const refLink = `https://t.me/zuzim_universe_bot?start=ref_${userId}`;
-    await ctx.reply(`🔗 \`${refLink}\``, { parse_mode: 'Markdown' });
-});
-
-bot.hears('🔙 Назад', async (ctx) => {
-    await ctx.reply('🏠 *Главное меню*', { parse_mode: 'Markdown', ...mainKeyboard() });
+    await ctx.reply(`🔗 \`https://t.me/zuzim_universe_bot?start=ref_${userId}\``, { parse_mode: 'Markdown' });
 });
 
 bot.on('text', async (ctx) => {
@@ -200,13 +174,12 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// ========== ЗАПУСК ==========
+// Запуск бота
 async function start() {
     await initDB();
     await bot.launch();
-    console.log('🚀 ZUZ Universe Bot запущен!');
+    console.log('🚀 Бот запущен');
     console.log('📱 https://t.me/zuzim_universe_bot');
-    console.log(`🎯 Mini App URL: ${MINI_APP_URL}`);
 }
 
 start();
