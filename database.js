@@ -1,38 +1,34 @@
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
+const Database = require('better-sqlite3');
+const path = require('path');
 
-let db;
+const db = new Database(path.join(__dirname, 'zuz.db'));
 
-async function initDB() {
-    db = await open({
-        filename: './database.sqlite',
-        driver: sqlite3.Database
-    });
+// Создание таблиц
+db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        wallet TEXT,
+        balance REAL DEFAULT 0,
+        staked REAL DEFAULT 0,
+        rewards REAL DEFAULT 0,
+        referrer_id INTEGER,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+    );
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            first_name TEXT,
-            username TEXT,
-            referrer_id INTEGER,
-            balance_zuz REAL DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS referrals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            referrer_id INTEGER,
-            referred_id INTEGER,
-            earned_zuz REAL DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
+    CREATE TABLE IF NOT EXISTS referrals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_id INTEGER,
+        referred_id INTEGER,
+        earned REAL DEFAULT 0,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+    );
 
-    console.log('✅ Database initialized');
-    return db;
-}
+    CREATE TABLE IF NOT EXISTS staking (
+        user_id INTEGER PRIMARY KEY,
+        amount REAL DEFAULT 0,
+        last_update INTEGER,
+        FOREIGN KEY(user_id) REFERENCES users(user_id)
+    );
+`);
 
-function getDB() {
-    return db;
-}
-
-module.exports = { initDB, getDB };
+module.exports = db;
