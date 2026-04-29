@@ -1,6 +1,7 @@
 {
-  "name": "zuzimuniverse-bot",
-  "version": "1.0.0",
+  "name": "zuz-universe-bot",
+  "version": "2.0.0",
+  "description": "ZUZ Universe Telegram Bot with Staking, Referrals, and Mini App",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -8,6 +9,7 @@
   "dependencies": {
     "telegraf": "^4.15.3",
     "express": "^4.18.2",
+    "better-sqlite3": "^9.4.3",
     "dotenv": "^16.3.1"
   }
 }
