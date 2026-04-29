@@ -1,8 +1,21 @@
 require('dotenv').config();
 const { Telegraf, Markup, session } = require('telegraf');
 const { initDB, getDB } = require('./database');
+const express = require('express');
 
-// ========== КОНФИГ ==========
+// ========== ВЕБ-СЕРВЕР ДЛЯ RENDER (он ничего не делает, только отвечает) ==========
+const app = express();
+const port = process.env.PORT || 10000;
+
+app.get('/', (req, res) => {
+    res.send('ZUZ Universe Bot is running');
+});
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`✅ Web server (fake) listening on port ${port}`);
+});
+
+// ========== КОНФИГ БОТА ==========
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || 'https://zuzumiverse-bot.onrender.com';
 
